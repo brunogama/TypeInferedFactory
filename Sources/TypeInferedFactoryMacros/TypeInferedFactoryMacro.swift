@@ -20,14 +20,17 @@ public enum FactoryBuildableMacro: ExtensionMacro {
         in context: some SwiftSyntaxMacros.MacroExpansionContext
     ) throws -> [SwiftSyntax.ExtensionDeclSyntax] {
         let type = type.trimmed
-//        return []
-        
+        let parsedMembers = membersListPropertyData(declaration.memberBlock.members)
+        let tuple = "(\(parsedMembers.map(\.type).joined(separator: ", ")))"
+        let initParameters = "(" + parsedMembers.enumerated().compactMap { index, member in
+            member.propertyName + ": parameter.\(index)"
+        }.joined(separator: ", ") + ")"
         let extensionBody = """
         extension \(type): TypeInferedFactoryBuildable {
-            typealias RequiredInitializationParameter = (String, Int)
+            typealias RequiredInitializationParameter = \(tuple)
 
             static func construct(_ parameter: RequiredInitializationParameter) -> \(type) {
-                \(type)(name: parameter.0, age: parameter.1)
+                \(type)\(initParameters)
             }
         }
         """
@@ -35,6 +38,20 @@ public enum FactoryBuildableMacro: ExtensionMacro {
         let extenasionSyntax = try ExtensionDeclSyntax(.init(stringLiteral: extensionBody))
         
         return [extenasionSyntax]
+    }
+    
+    private static func membersListPropertyData(_ meberList: MemberBlockItemListSyntax) -> [PropertyData] {
+        meberList.compactMap { member -> PropertyData? in
+            guard let varDcl = member.decl.as(VariableDeclSyntax.self),
+                 let binding = varDcl.bindings.first,
+                 let identifier = binding.pattern.as(IdentifierPatternSyntax.self)?.identifier.text,
+                 let typeAnnotation = binding.typeAnnotation?.type
+             else {
+                 return nil
+             }
+            
+            return PropertyData(propertyName: identifier, type: typeAnnotation.description)
+        }
     }
 }
 
