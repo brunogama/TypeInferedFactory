@@ -2,29 +2,6 @@ import Foundation
 import Swinject
 import TypeInferedFactory
 
-public protocol TypeInferedBuildable {
-    associatedtype RequiredInitializationParameter
-
-    static func construct(
-        _ parameter: RequiredInitializationParameter
-    ) -> Self
-}
-
-extension TypeInferedBuildable {
-    public static func construct(
-        _ parameter: RequiredInitializationParameter
-    ) -> Self {
-        assertionFailure("This method should be overridden by the conforming type.")
-        abort()
-    }
-}
-
-public protocol TypeInferedFactoryProtocol {
-    func make<Output, each T>(
-        _ value: repeat each T
-    ) -> Output where Output: TypeInferedBuildable, Output.RequiredInitializationParameter == (repeat each T)
-}
-
 final class Factory: TypeInferedFactoryProtocol {
     func make<Output, each T>(
         _ value: repeat each T
