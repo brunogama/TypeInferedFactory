@@ -20,6 +20,22 @@ public enum FactoryBuildableMacro: ExtensionMacro {
         conformingTo protocols: [SwiftSyntax.TypeSyntax],
         in context: some SwiftSyntaxMacros.MacroExpansionContext
     ) throws -> [SwiftSyntax.ExtensionDeclSyntax] {
+        if isEnum(declarationGroup) {
+            let message = MacroDiagnosticMessage(
+                id: "invalid-type-assignment",
+                message: "Macro cannot be applied to enums.",
+                severity: .error
+            )
+            
+            context.diagnose(
+                Diagnostic(
+                    node: declarationGroup,
+                    message: message
+                )
+            )
+            throw message
+        }
+        
         let trimmedType = typeSyntax.trimmed
         let propertyDataList = extractProperties(from: declarationGroup.memberBlock.members)
         if propertyDataList.isEmpty {
@@ -61,6 +77,10 @@ public enum FactoryBuildableMacro: ExtensionMacro {
                 severity: .error
             )
         }
+    }
+    
+    private static func isEnum(_ declarationGroup: DeclGroupSyntax) -> Bool {
+        declarationGroup.is(EnumDeclSyntax.self)
     }
 
     private static func extractProperties(from members: MemberBlockItemListSyntax) -> [PropertyData] {
