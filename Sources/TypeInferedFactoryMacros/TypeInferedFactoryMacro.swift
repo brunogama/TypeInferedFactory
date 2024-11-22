@@ -22,7 +22,7 @@ public enum FactoryBuildableMacro: ExtensionMacro {
         let type = type.trimmed
         let parsedMembers = membersListPropertyData(declaration.memberBlock.members)
         let tuple = createRequiredInitializationParameter(members: parsedMembers)
-        let memberWiseInit = createMemberWiseInit(type: type, members: parsedMembers)
+        let memberWiseInit = makeInit(type: type, members: parsedMembers)
         let extensionBody = """
             extension \(type): TypeInferedFactoryBuildable {
                 typealias RequiredInitializationParameter = \(tuple)
@@ -75,17 +75,15 @@ public enum FactoryBuildableMacro: ExtensionMacro {
         }
     }
 
-    private static func createMemberWiseInit(
+    private static func makeInit(
         type: some SwiftSyntax.TypeSyntaxProtocol,
         members: [PropertyData]
     ) -> String {
-        let initParameters =
-            "("
-            + members.enumerated()
-            .compactMap { index, member in
-                member.propertyName + ": parameter.\(index)"
-            }
-            .joined(separator: ", ") + ")"
+        var initParameters = "("
+        initParameters += members.enumerated().compactMap { index, member in
+            member.propertyName + ": parameter.\(index)"
+        }.joined(separator: ", ")
+        initParameters += ")"
         return "\(type.description)\(initParameters)"
     }
 
