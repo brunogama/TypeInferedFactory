@@ -104,4 +104,26 @@ final class TypeInferedFactoryTests: XCTestCase {
         throw XCTSkip("macros are only supported when running tests for the host platform")
         #endif
     }
+    
+    func testFailureForEnums() {
+        assertMacroExpansion(
+            """
+            @FactoryBuildable
+            enum Ham {
+                case spam
+            }
+            """,
+            expandedSource: """
+            enum Ham {
+                case spam
+            }
+            """,
+            diagnostics: [
+                DiagnosticSpec(message: "Macro cannot be applied to enums.", line: 1, column: 1),
+                DiagnosticSpec(message: "Macro cannot be applied to enums.", line: 1, column: 1),
+            ],
+            macros: testMacros
+        )
+    }
 }
+

@@ -33,7 +33,7 @@ public enum FactoryBuildableMacro: ExtensionMacro {
                     message: message
                 )
             )
-            throw message
+            throw TypeInferedFactoryMacroError.message("Macro cannot be applied to enums.")
         }
         
         let trimmedType = typeSyntax.trimmed
@@ -41,7 +41,7 @@ public enum FactoryBuildableMacro: ExtensionMacro {
         if propertyDataList.isEmpty {
             let message = MacroDiagnosticMessage(
                 id: "property-extraction-error",
-                message: "No properties found in the declaration",
+                message: "No properties found in the declaration.",
                 severity: .error
             )
 
@@ -52,7 +52,7 @@ public enum FactoryBuildableMacro: ExtensionMacro {
                 )
             )
 
-            throw message
+            throw TypeInferedFactoryMacroError.message("No properties found in the declaration.")
         }
 
         let initializationTuple = createInitializationParameterType(members: propertyDataList)
