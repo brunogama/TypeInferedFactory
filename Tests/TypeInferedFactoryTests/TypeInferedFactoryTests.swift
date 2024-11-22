@@ -44,7 +44,7 @@ final class TypeInferedFactoryTests: XCTestCase {
         #endif
     }
 
-    func testMultipleInitClassMacroExpansion() throws {
+    func testMultipleInitOnFinalClassMacroExpansion() throws {
         #if canImport(TypeInferedFactoryMacros)
         assertMacroExpansion(
             """
@@ -124,6 +124,109 @@ final class TypeInferedFactoryTests: XCTestCase {
             ],
             macros: testMacros
         )
+    }
+    
+//    func testClassWithGenerics() {
+//        assertMacroExpansion(
+//            """
+//            @FactoryBuildable
+//            class Test<U, V> {
+//                let u: U
+//                let v: V
+//                
+//                init(u: U, v: V) {
+//                    self.u = u
+//                    self.v = v
+//                }
+//            }
+//            """,
+//            expandedSource: """
+//            class Test<U, V> {
+//                let u: U
+//                let v: V
+//                
+//                init(u: U, v: V) {
+//                    self.u = u
+//                    self.v = v
+//                }
+//            }
+//            
+//            extension SimpleContainer: TypeInferedFactoryBuildable {
+//                typealias RequiredInitializationParameter = (Int, String, String, Bool)
+//
+//                static func construct(_ parameter: RequiredInitializationParameter) -> SimpleContainer {
+//                    Test<U, V>(u: parameter.0, v: parameter.1)
+//                }
+//            }
+//            """,
+//            diagnostics: [
+//                DiagnosticSpec(message: "Macro cannot be applied to enums.", line: 1, column: 1),
+//                DiagnosticSpec(message: "Macro cannot be applied to enums.", line: 1, column: 1),
+//            ],
+//            macros: testMacros
+//        )
+//    }
+    
+    
+    func testMultipleInitClassMacroExpansion() throws {
+        #if canImport(TypeInferedFactoryMacros)
+        assertMacroExpansion(
+            """
+            @FactoryBuildable
+            class SimpleContainer {
+                let firstValue: Int
+                let secondValue: String
+                let description: String
+
+                init(firstValue: Int, secondValue: String, description: String, shouldRedact: Bool) {
+                    self.firstValue = shouldRedact ? -1 : firstValue
+                    self.secondValue = shouldRedact ? "" : secondValue
+                    self.description = shouldRedact ? "" : description
+                }
+
+                convenience init(firstValue: Int, secondValue: String) {
+                    self.init(firstValue: firstValue, secondValue: secondValue, description: "Default description")
+                }
+
+                convenience init(firstValue: Int) {
+                    self.init(firstValue: firstValue, secondValue: "Default String", description: "Default description")
+                }
+            }
+            """,
+            expandedSource: """
+                class SimpleContainer {
+                    let firstValue: Int
+                    let secondValue: String
+                    let description: String
+
+                    init(firstValue: Int, secondValue: String, description: String, shouldRedact: Bool) {
+                        self.firstValue = shouldRedact ? -1 : firstValue
+                        self.secondValue = shouldRedact ? "" : secondValue
+                        self.description = shouldRedact ? "" : description
+                    }
+
+                    convenience init(firstValue: Int, secondValue: String) {
+                        self.init(firstValue: firstValue, secondValue: secondValue, description: "Default description")
+                    }
+
+                    convenience init(firstValue: Int) {
+                        self.init(firstValue: firstValue, secondValue: "Default String", description: "Default description")
+                    }
+                }
+
+                extension SimpleContainer: TypeInferedFactoryBuildable {
+                    typealias RequiredInitializationParameter = (Int, String, String, Bool)
+
+                    static func construct(_ parameter: RequiredInitializationParameter) -> SimpleContainer {
+                        SimpleContainer(firstValue: parameter.0, secondValue: parameter.1, description: parameter.2, shouldRedact: parameter.3)
+                    }
+                }
+                """,
+            macros: testMacros
+        )
+        #else
+        throw XCTSkip("macros are only supported when running tests for the host platform")
+        #endif
     }
 }
 

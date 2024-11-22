@@ -20,21 +20,8 @@ public enum FactoryBuildableMacro: ExtensionMacro {
         conformingTo protocols: [SwiftSyntax.TypeSyntax],
         in context: some SwiftSyntaxMacros.MacroExpansionContext
     ) throws -> [SwiftSyntax.ExtensionDeclSyntax] {
-        if isEnum(declarationGroup) {
-            let message = MacroDiagnosticMessage(
-                id: "invalid-type-assignment",
-                message: "Macro cannot be applied to enums.",
-                severity: .error
-            )
-            
-            context.diagnose(
-                Diagnostic(
-                    node: declarationGroup,
-                    message: message
-                )
-            )
-            throw TypeInferedFactoryMacroError.message("Macro cannot be applied to enums.")
-        }
+        // Validate that the declaration is a struct or a final class
+        try validateFinalClassOrStruct(declarationGroup, context: context)
         
         let trimmedType = typeSyntax.trimmed
         let propertyDataList = extractProperties(from: declarationGroup.memberBlock.members)
@@ -79,9 +66,46 @@ public enum FactoryBuildableMacro: ExtensionMacro {
         }
     }
     
-    private static func isEnum(_ declarationGroup: DeclGroupSyntax) -> Bool {
-        declarationGroup.is(EnumDeclSyntax.self)
-    }
+    private static func validateFinalClassOrStruct(
+         _ declarationGroup: some SwiftSyntax.DeclGroupSyntax,
+         context: some SwiftSyntaxMacros.MacroExpansionContext
+     ) throws {
+         if let structDecl = declarationGroup.as(StructDeclSyntax.self) {
+             // Structs are always valid
+             return
+         } else if let classDecl = declarationGroup.as(ClassDeclSyntax.self) {
+             // Check if the class is final
+             if !classDecl.modifiers.contains(where: { $0.name.text == "final" }) {
+                 let message = MacroDiagnosticMessage(
+                     id: "invalid-type-assignment",
+                     message: "FactoryBuildableMacro can only be applied to final classes or structs.",
+                     severity: .error
+                 )
+                 
+                 context.diagnose(
+                     Diagnostic(
+                         node: classDecl,
+                         message: message
+                     )
+                 )
+                 throw TypeInferedFactoryMacroError.message("FactoryBuildableMacro can only be applied to final classes or structs.")
+             }
+         } else {
+             let message = MacroDiagnosticMessage(
+                 id: "invalid-type-assignment",
+                 message: "FactoryBuildableMacro can only be applied to final classes or structs.",
+                 severity: .error
+             )
+             
+             context.diagnose(
+                 Diagnostic(
+                     node: declarationGroup,
+                     message: message
+                 )
+             )
+             throw TypeInferedFactoryMacroError.message("FactoryBuildableMacro can only be applied to final classes or structs.")
+         }
+     }
 
     private static func extractProperties(from members: MemberBlockItemListSyntax) -> [PropertyData] {
         let propertiesFromInitializers = extractPropertiesFromInitializers(members)
