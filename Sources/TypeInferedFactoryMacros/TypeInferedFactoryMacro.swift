@@ -70,7 +70,7 @@ public enum FactoryBuildableMacro: ExtensionMacro {
          _ declarationGroup: some SwiftSyntax.DeclGroupSyntax,
          context: some SwiftSyntaxMacros.MacroExpansionContext
      ) throws {
-         if let structDecl = declarationGroup.as(StructDeclSyntax.self) {
+         if let _ = declarationGroup.as(StructDeclSyntax.self) {
              // Structs are always valid
              return
          } else if let classDecl = declarationGroup.as(ClassDeclSyntax.self) {
