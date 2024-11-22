@@ -24,41 +24,70 @@ public enum FactoryBuildableMacro: ExtensionMacro {
         let tuple = createRequiredInitializationParameter(members: parsedMembers)
         let memberWiseInit = createMemberWiseInit(type: type, members: parsedMembers)
         let extensionBody = """
-        extension \(type): TypeInferedFactoryBuildable {
-            typealias RequiredInitializationParameter = \(tuple)
+            extension \(type): TypeInferedFactoryBuildable {
+                typealias RequiredInitializationParameter = \(tuple)
 
-            static func construct(_ parameter: RequiredInitializationParameter) -> \(type) {
-                \(memberWiseInit)
+                static func construct(_ parameter: RequiredInitializationParameter) -> \(type) {
+                    \(memberWiseInit)
+                }
             }
-        }
-        """
-        
+            """
+
         let extenasionSyntax = try ExtensionDeclSyntax(.init(stringLiteral: extensionBody))
-        
+
         return [extenasionSyntax]
     }
-    
-    private static func membersListPropertyData(_ meberList: MemberBlockItemListSyntax) -> [PropertyData] {
-        meberList.compactMap { member -> PropertyData? in
-            guard let varDcl = member.decl.as(VariableDeclSyntax.self),
-                 let binding = varDcl.bindings.first,
-                 let identifier = binding.pattern.as(IdentifierPatternSyntax.self)?.identifier.text,
-                 let typeAnnotation = binding.typeAnnotation?.type
-             else {
-                 return nil
-             }
-            
-            return PropertyData(propertyName: identifier, type: typeAnnotation.description)
+
+    private static func membersListPropertyData(_ memberList: MemberBlockItemListSyntax) -> [PropertyData] {
+        let initializerPropertyData = extractPropertyDataFromInitializers(memberList)
+        if !initializerPropertyData.isEmpty {
+            return initializerPropertyData
+        }
+        
+        return extractPropertyDataFromVariableDeclarations(memberList)
+    }
+
+    private static func extractPropertyDataFromInitializers(_ memberList: MemberBlockItemListSyntax) -> [PropertyData] {
+        let initializerDeclarations = memberList.compactMap { $0.decl.as(InitializerDeclSyntax.self) }
+        guard !initializerDeclarations.isEmpty else { return [] }
+        
+        let initializerPropertyLists = initializerDeclarations.map { initializer -> [PropertyData] in
+            initializer.signature.parameterClause.parameters.compactMap { parameter in
+                PropertyData(propertyName: parameter.firstName.text, type: parameter.type.description)
+            }
+        }
+        
+        return initializerPropertyLists.max(by: { $0.count < $1.count }) ?? []
+    }
+
+    private static func extractPropertyDataFromVariableDeclarations(_ memberList: MemberBlockItemListSyntax) -> [PropertyData] {
+        memberList.compactMap { member -> PropertyData? in
+            guard let variableDeclaration = member.decl.as(VariableDeclSyntax.self),
+                  let firstBinding = variableDeclaration.bindings.first,
+                  let propertyName = firstBinding.pattern.as(IdentifierPatternSyntax.self)?.identifier.text,
+                  let propertyType = firstBinding.typeAnnotation?.type
+            else {
+                return nil
+            }
+            return PropertyData(propertyName: propertyName, type: propertyType.description)
         }
     }
-    
-    private static func createMemberWiseInit(type: some SwiftSyntax.TypeSyntaxProtocol, members: [PropertyData]) -> String {
-        let initParameters = "(" + members.enumerated().compactMap { index, member in
-            member.propertyName + ": parameter.\(index)"
-        }.joined(separator: ", ") + ")"
+
+
+    private static func createMemberWiseInit(
+        type: some SwiftSyntax.TypeSyntaxProtocol,
+        members: [PropertyData]
+    ) -> String {
+        let initParameters =
+            "("
+            + members.enumerated()
+            .compactMap { index, member in
+                member.propertyName + ": parameter.\(index)"
+            }
+            .joined(separator: ", ") + ")"
         return "\(type.description)\(initParameters)"
     }
-    
+
     private static func createRequiredInitializationParameter(members: [PropertyData]) -> String {
         "(\(members.map(\.type).joined(separator: ", ")))"
     }
