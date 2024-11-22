@@ -19,8 +19,22 @@ public enum FactoryBuildableMacro: ExtensionMacro {
         conformingTo protocols: [SwiftSyntax.TypeSyntax],
         in context: some SwiftSyntaxMacros.MacroExpansionContext
     ) throws -> [SwiftSyntax.ExtensionDeclSyntax] {
-        let type = type.trimmed
-        return []
+//        let type = type.trimmed
+//        return []
+        
+        let extensionBody = """
+        extension Developer: TypeInferedFactoryBuildable {
+            typealias RequiredInitializationParameter = (String, Int)
+
+            static func construct(_ parameter: RequiredInitializationParameter) -> Developer {
+                Developer(name: parameter.0, age: parameter.1)
+            }
+        }
+        """
+        
+        let extenasionSyntax = try ExtensionDeclSyntax(.init(stringLiteral: extensionBody))
+        
+        return [extenasionSyntax]
     }
 }
 

@@ -24,6 +24,11 @@ final class TypeInferedFactoryTests: XCTestCase {
             }
             """,
             expandedSource: """
+                struct Developer {
+                    let name: String
+                    let age: Int
+                }
+
                 extension Developer: TypeInferedFactoryBuildable {
                     typealias RequiredInitializationParameter = (String, Int)
 
