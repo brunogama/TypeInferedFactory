@@ -7,12 +7,16 @@
 
 import SwiftDiagnostics
 import SwiftSyntax
+import Foundation
 
-struct MacroDiagnosticMessage: DiagnosticMessage, Error {
+struct MacroDiagnosticMessage: DiagnosticMessage, Error, LocalizedError, CustomStringConvertible {
     let message: String
     let diagnosticID: MessageID
     let severity: DiagnosticSeverity
-
+    
+    var description: String { message }
+    var localizedDescription: String { message }
+    
     init(id: String, message: String, severity: DiagnosticSeverity) {
         self.message = message
         self.diagnosticID = MessageID.makeHashableMacroMessageID(id: id)

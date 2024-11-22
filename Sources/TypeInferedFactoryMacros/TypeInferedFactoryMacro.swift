@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftCompilerPlugin
+import SwiftDiagnostics
 import SwiftSyntax
 import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
@@ -21,6 +22,23 @@ public enum FactoryBuildableMacro: ExtensionMacro {
     ) throws -> [SwiftSyntax.ExtensionDeclSyntax] {
         let trimmedType = typeSyntax.trimmed
         let propertyDataList = extractProperties(from: declarationGroup.memberBlock.members)
+        if propertyDataList.isEmpty {
+            let message = MacroDiagnosticMessage(
+                id: "property-extraction-error",
+                message: "No properties found in the declaration",
+                severity: .error
+            )
+
+            context.diagnose(
+                Diagnostic(
+                    node: declarationGroup,
+                    message: message
+                )
+            )
+
+            throw message
+        }
+
         let initializationTuple = createInitializationParameterType(members: propertyDataList)
         let initializerCode = generateMemberwiseInitializer(for: trimmedType, with: propertyDataList)
         let extensionCode = """
@@ -33,9 +51,16 @@ public enum FactoryBuildableMacro: ExtensionMacro {
             }
             """
 
-        let extensionDeclaration = try ExtensionDeclSyntax(.init(stringLiteral: extensionCode))
-
-        return [extensionDeclaration]
+        do {
+            return try [ExtensionDeclSyntax(.init(stringLiteral: extensionCode))]
+        }
+        catch {
+            throw MacroDiagnosticMessage(
+                id: "extension-creation-error",
+                message: "Unable to create extension for \(trimmedType.description).",
+                severity: .error
+            )
+        }
     }
 
     private static func extractProperties(from members: MemberBlockItemListSyntax) -> [PropertyData] {
