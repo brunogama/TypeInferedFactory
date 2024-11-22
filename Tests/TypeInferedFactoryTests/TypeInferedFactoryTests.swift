@@ -43,7 +43,7 @@ final class TypeInferedFactoryTests: XCTestCase {
         throw XCTSkip("macros are only supported when running tests for the host platform")
         #endif
     }
-    
+
     func testMultipleInitClassMacroExpansion() throws {
         #if canImport(TypeInferedFactoryMacros)
         assertMacroExpansion(

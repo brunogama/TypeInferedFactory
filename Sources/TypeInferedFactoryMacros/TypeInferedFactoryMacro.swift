@@ -43,36 +43,37 @@ public enum FactoryBuildableMacro: ExtensionMacro {
         if !initializerPropertyData.isEmpty {
             return initializerPropertyData
         }
-        
+
         return extractPropertyDataFromVariableDeclarations(memberList)
     }
 
     private static func extractPropertyDataFromInitializers(_ memberList: MemberBlockItemListSyntax) -> [PropertyData] {
         let initializerDeclarations = memberList.compactMap { $0.decl.as(InitializerDeclSyntax.self) }
         guard !initializerDeclarations.isEmpty else { return [] }
-        
+
         let initializerPropertyLists = initializerDeclarations.map { initializer -> [PropertyData] in
             initializer.signature.parameterClause.parameters.compactMap { parameter in
                 PropertyData(propertyName: parameter.firstName.text, type: parameter.type.description)
             }
         }
-        
+
         return initializerPropertyLists.max(by: { $0.count < $1.count }) ?? []
     }
 
-    private static func extractPropertyDataFromVariableDeclarations(_ memberList: MemberBlockItemListSyntax) -> [PropertyData] {
+    private static func extractPropertyDataFromVariableDeclarations(
+        _ memberList: MemberBlockItemListSyntax
+    ) -> [PropertyData] {
         memberList.compactMap { member -> PropertyData? in
             guard let variableDeclaration = member.decl.as(VariableDeclSyntax.self),
-                  let firstBinding = variableDeclaration.bindings.first,
-                  let propertyName = firstBinding.pattern.as(IdentifierPatternSyntax.self)?.identifier.text,
-                  let propertyType = firstBinding.typeAnnotation?.type
+                let firstBinding = variableDeclaration.bindings.first,
+                let propertyName = firstBinding.pattern.as(IdentifierPatternSyntax.self)?.identifier.text,
+                let propertyType = firstBinding.typeAnnotation?.type
             else {
                 return nil
             }
             return PropertyData(propertyName: propertyName, type: propertyType.description)
         }
     }
-
 
     private static func createMemberWiseInit(
         type: some SwiftSyntax.TypeSyntaxProtocol,

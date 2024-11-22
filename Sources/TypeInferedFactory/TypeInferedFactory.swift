@@ -11,6 +11,6 @@
     extension,
     conformances: TypeInferedFactoryBuildable,
     names: named(RequiredInitializationParameter),
-           named(construct)
+    named(construct)
 )
 public macro FactoryBuildable() = #externalMacro(module: "TypeInferedFactoryMacros", type: "FactoryBuildableMacro")
