@@ -1,11 +1,11 @@
-// The Swift Programming Language
-// https://docs.swift.org/swift-book
+//
+//  TypeInferedFactory.swift
+//  TypeInferedFactory
+//
+//  Created by Bruno on 22/11/24.
+//
 
-/// A macro that produces both a value and a string containing the
-/// source code that generated the value. For example,
-///
-///     #stringify(x + y)
-///
-/// produces a tuple `(x + y, "x + y")`.
-@freestanding(expression)
-public macro stringify<T>(_ value: T) -> (T, String) = #externalMacro(module: "TypeInferedFactoryMacros", type: "StringifyMacro")
+@_exported import TypeInferedFactoryCore
+
+@attached(extension, conformances: TypeInferedFactoryBuildable)
+public macro FactoryBuildable() = #externalMacro(module: "TypeInferedFactoryMacros", type: "FactoryBuildableMacro")

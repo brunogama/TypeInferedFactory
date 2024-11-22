@@ -6,8 +6,8 @@
 //
 
 open class Factory: TypeInferedFactoryProtocol {
-    public init() { }
-    
+    public init() {}
+
     public func make<Output, each T>(
         _ value: repeat each T
     ) -> Output where Output: TypeInferedFactoryBuildable, Output.RequiredInitializationParameter == (repeat each T) {

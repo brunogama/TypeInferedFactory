@@ -6,9 +6,8 @@ import PackageDescription
 
 let package = Package(
     name: "TypeInferedFactory",
-    platforms: [.macOS(.v14), .iOS(.v13)],
+    platforms: [.macOS(.v10_15), .iOS(.v15)],
     products: [
-        // Products define the executables and libraries a package produces, making them visible to other packages.
         .library(
             name: "TypeInferedFactory",
             targets: ["TypeInferedFactory"]
@@ -21,41 +20,55 @@ let package = Package(
     dependencies: [
         .package(
             url: "https://github.com/swiftlang/swift-syntax.git",
-            from: "600.0.0-latest"),
+            from: "600.0.0-latest"
+        ),
         .package(
-            url: "https://github.com/Swinject/Swinject.git", from: "2.9.1"),
+            url: "https://github.com/Swinject/Swinject.git",
+            from: "2.9.1"
+        )
     ],
     targets: [
-        // Targets are the basic building blocks of a package, defining a module or a test suite.
-        // Targets can depend on other targets in this package and products from dependencies.
-        // Macro implementation that performs the source transformation of a macro.
+        .target(
+            name: "TypeInferedFactoryCore",
+            dependencies: [],
+            path: "Sources/TypeInferedFactoryCore"
+        ),
         .macro(
             name: "TypeInferedFactoryMacros",
             dependencies: [
-                .product(name: "SwiftSyntaxMacros", package: "swift-syntax"),
+                "TypeInferedFactoryCore",
                 .product(name: "SwiftCompilerPlugin", package: "swift-syntax"),
-            ]
+                .product(name: "SwiftSyntax", package: "swift-syntax"),
+                .product(name: "SwiftSyntaxMacros", package: "swift-syntax"),
+                .product(name: "SwiftDiagnostics", package: "swift-syntax"),
+            ],
+            path: "Sources/TypeInferedFactoryMacros"
         ),
-
-        // Library that exposes a macro as part of its API, which is used in client programs.
         .target(
             name: "TypeInferedFactory",
-            dependencies: ["TypeInferedFactoryMacros"]),
-
-        // A client of the library, which is able to use the macro in its own code.
+            dependencies: [
+                "TypeInferedFactoryMacros",
+                "TypeInferedFactoryCore",
+            ],
+            path: "Sources/TypeInferedFactory"
+        ),
         .executableTarget(
             name: "TypeInferedFactoryClient",
-            dependencies: ["TypeInferedFactory", "Swinject"]),
-
-        // A test target used to develop the macro implementation.
+            dependencies: [
+                "TypeInferedFactory",
+                "Swinject",
+            ],
+            path: "Sources/TypeInferedFactoryClient"
+        ),
         .testTarget(
             name: "TypeInferedFactoryTests",
             dependencies: [
+                "TypeInferedFactoryCore",
                 "TypeInferedFactoryMacros",
-                .product(
-                    name: "SwiftSyntaxMacrosTestSupport",
-                    package: "swift-syntax"),
-            ]
+                .product(name: "SwiftSyntaxMacros", package: "swift-syntax"),
+                .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
+            ],
+            path: "Tests/TypeInferedFactoryTests"
         ),
     ]
 )

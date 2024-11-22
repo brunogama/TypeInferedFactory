@@ -4,12 +4,11 @@ import SwiftSyntaxMacros
 import SwiftSyntaxMacrosTestSupport
 import XCTest
 
-// Macro implementations build for the host, so the corresponding module is not available when cross-compiling. Cross-compiled tests may still make use of the macro itself in end-to-end tests.
 #if canImport(TypeInferedFactoryMacros)
 import TypeInferedFactoryMacros
 
 let testMacros: [String: Macro.Type] = [
-    "stringify": StringifyMacro.self,
+    "FactoryBuildable": FactoryBuildableMacro.self
 ]
 #endif
 
@@ -18,27 +17,21 @@ final class TypeInferedFactoryTests: XCTestCase {
         #if canImport(TypeInferedFactoryMacros)
         assertMacroExpansion(
             """
-            #stringify(a + b)
+            @FactoryBuildable
+            struct Developer {
+                let name: String
+                let age: Int
+            }
             """,
             expandedSource: """
-            (a + b, "a + b")
-            """,
-            macros: testMacros
-        )
-        #else
-        throw XCTSkip("macros are only supported when running tests for the host platform")
-        #endif
-    }
+                extension Developer: TypeInferedFactoryBuildable {
+                    typealias RequiredInitializationParameter = (String, Int)
 
-    func testMacroWithStringLiteral() throws {
-        #if canImport(TypeInferedFactoryMacros)
-        assertMacroExpansion(
-            #"""
-            #stringify("Hello, \(name)")
-            """#,
-            expandedSource: #"""
-            ("Hello, \(name)", #""Hello, \(name)""#)
-            """#,
+                    static func construct(_ parameter: RequiredInitializationParameter) -> Developer {
+                        Developer(name: parameter.0, age: parameter.1)
+                    }
+                }
+                """,
             macros: testMacros
         )
         #else
