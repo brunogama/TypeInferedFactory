@@ -1,11 +1,11 @@
 //
-//  TypeInferedBuildable.swift
+//  TypeInferedFactoryBuildable.swift
 //  TypeInferedFactory
 //
 //  Created by Bruno on 22/11/24.
 //
 
-public protocol TypeInferedBuildable {
+public protocol TypeInferedFactoryBuildable {
     associatedtype RequiredInitializationParameter
 
     static func construct(
