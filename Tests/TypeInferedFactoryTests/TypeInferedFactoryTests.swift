@@ -13,7 +13,7 @@ let testMacros: [String: Macro.Type] = [
 #endif
 
 final class TypeInferedFactoryTests: XCTestCase {
-    func testMacro() throws {
+    func testSimpleStructMacro() throws {
         #if canImport(TypeInferedFactoryMacros)
         assertMacroExpansion(
             """

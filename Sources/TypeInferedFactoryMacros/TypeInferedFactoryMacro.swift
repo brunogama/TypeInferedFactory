@@ -21,16 +21,14 @@ public enum FactoryBuildableMacro: ExtensionMacro {
     ) throws -> [SwiftSyntax.ExtensionDeclSyntax] {
         let type = type.trimmed
         let parsedMembers = membersListPropertyData(declaration.memberBlock.members)
-        let tuple = "(\(parsedMembers.map(\.type).joined(separator: ", ")))"
-        let initParameters = "(" + parsedMembers.enumerated().compactMap { index, member in
-            member.propertyName + ": parameter.\(index)"
-        }.joined(separator: ", ") + ")"
+        let tuple = createRequiredInitializationParameter(members: parsedMembers)
+        let memberWiseInit = createMemberWiseInit(type: type, members: parsedMembers)
         let extensionBody = """
         extension \(type): TypeInferedFactoryBuildable {
             typealias RequiredInitializationParameter = \(tuple)
 
             static func construct(_ parameter: RequiredInitializationParameter) -> \(type) {
-                \(type)\(initParameters)
+                \(memberWiseInit)
             }
         }
         """
@@ -52,6 +50,17 @@ public enum FactoryBuildableMacro: ExtensionMacro {
             
             return PropertyData(propertyName: identifier, type: typeAnnotation.description)
         }
+    }
+    
+    private static func createMemberWiseInit(type: some SwiftSyntax.TypeSyntaxProtocol, members: [PropertyData]) -> String {
+        let initParameters = "(" + members.enumerated().compactMap { index, member in
+            member.propertyName + ": parameter.\(index)"
+        }.joined(separator: ", ") + ")"
+        return "\(type.description)\(initParameters)"
+    }
+    
+    private static func createRequiredInitializationParameter(members: [PropertyData]) -> String {
+        "(\(members.map(\.type).joined(separator: ", ")))"
     }
 }
 
