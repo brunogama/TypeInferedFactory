@@ -13,57 +13,56 @@ import SwiftSyntaxMacros
 
 public enum FactoryBuildableMacro: ExtensionMacro {
     public static func expansion(
-        of node: SwiftSyntax.AttributeSyntax,
-        attachedTo declaration: some SwiftSyntax.DeclGroupSyntax,
-        providingExtensionsOf type: some SwiftSyntax.TypeSyntaxProtocol,
+        of attribute: SwiftSyntax.AttributeSyntax,
+        attachedTo declarationGroup: some SwiftSyntax.DeclGroupSyntax,
+        providingExtensionsOf typeSyntax: some SwiftSyntax.TypeSyntaxProtocol,
         conformingTo protocols: [SwiftSyntax.TypeSyntax],
         in context: some SwiftSyntaxMacros.MacroExpansionContext
     ) throws -> [SwiftSyntax.ExtensionDeclSyntax] {
-        let type = type.trimmed
-        let parsedMembers = membersListPropertyData(declaration.memberBlock.members)
-        let tuple = createRequiredInitializationParameter(members: parsedMembers)
-        let memberWiseInit = makeInit(type: type, members: parsedMembers)
-        let extensionBody = """
-            extension \(type): TypeInferedFactoryBuildable {
-                typealias RequiredInitializationParameter = \(tuple)
+        let trimmedType = typeSyntax.trimmed
+        let propertyDataList = extractProperties(from: declarationGroup.memberBlock.members)
+        let initializationTuple = createInitializationParameterType(members: propertyDataList)
+        let initializerCode = generateMemberwiseInitializer(for: trimmedType, with: propertyDataList)
+        let extensionCode = """
+            extension \(trimmedType): TypeInferedFactoryBuildable {
+                typealias RequiredInitializationParameter = \(initializationTuple)
 
-                static func construct(_ parameter: RequiredInitializationParameter) -> \(type) {
-                    \(memberWiseInit)
+                static func construct(_ parameter: RequiredInitializationParameter) -> \(trimmedType) {
+                    \(initializerCode)
                 }
             }
             """
 
-        let extenasionSyntax = try ExtensionDeclSyntax(.init(stringLiteral: extensionBody))
+        let extensionDeclaration = try ExtensionDeclSyntax(.init(stringLiteral: extensionCode))
 
-        return [extenasionSyntax]
+        return [extensionDeclaration]
     }
 
-    private static func membersListPropertyData(_ memberList: MemberBlockItemListSyntax) -> [PropertyData] {
-        let initializerPropertyData = extractPropertyDataFromInitializers(memberList)
-        if !initializerPropertyData.isEmpty {
-            return initializerPropertyData
+    private static func extractProperties(from members: MemberBlockItemListSyntax) -> [PropertyData] {
+        let propertiesFromInitializers = extractPropertiesFromInitializers(members)
+        if !propertiesFromInitializers.isEmpty {
+            return propertiesFromInitializers
         }
-
-        return extractPropertyDataFromVariableDeclarations(memberList)
+        return extractPropertiesFromVariableDeclarations(members)
     }
 
-    private static func extractPropertyDataFromInitializers(_ memberList: MemberBlockItemListSyntax) -> [PropertyData] {
-        let initializerDeclarations = memberList.compactMap { $0.decl.as(InitializerDeclSyntax.self) }
+    private static func extractPropertiesFromInitializers(_ members: MemberBlockItemListSyntax) -> [PropertyData] {
+        let initializerDeclarations = members.compactMap { $0.decl.as(InitializerDeclSyntax.self) }
         guard !initializerDeclarations.isEmpty else { return [] }
 
-        let initializerPropertyLists = initializerDeclarations.map { initializer -> [PropertyData] in
+        let initializerPropertyGroups = initializerDeclarations.map { initializer -> [PropertyData] in
             initializer.signature.parameterClause.parameters.compactMap { parameter in
                 PropertyData(propertyName: parameter.firstName.text, type: parameter.type.description)
             }
         }
 
-        return initializerPropertyLists.max(by: { $0.count < $1.count }) ?? []
+        return initializerPropertyGroups.max(by: { $0.count < $1.count }) ?? []
     }
 
-    private static func extractPropertyDataFromVariableDeclarations(
-        _ memberList: MemberBlockItemListSyntax
+    private static func extractPropertiesFromVariableDeclarations(
+        _ members: MemberBlockItemListSyntax
     ) -> [PropertyData] {
-        memberList.compactMap { member -> PropertyData? in
+        members.compactMap { member -> PropertyData? in
             guard let variableDeclaration = member.decl.as(VariableDeclSyntax.self),
                 let firstBinding = variableDeclaration.bindings.first,
                 let propertyName = firstBinding.pattern.as(IdentifierPatternSyntax.self)?.identifier.text,
@@ -75,19 +74,19 @@ public enum FactoryBuildableMacro: ExtensionMacro {
         }
     }
 
-    private static func makeInit(
-        type: some SwiftSyntax.TypeSyntaxProtocol,
-        members: [PropertyData]
+    private static func generateMemberwiseInitializer(
+        for type: some SwiftSyntax.TypeSyntaxProtocol,
+        with properties: [PropertyData]
     ) -> String {
-        var initParameters = "("
-        initParameters += members.enumerated().compactMap { index, member in
-            member.propertyName + ": parameter.\(index)"
-        }.joined(separator: ", ")
-        initParameters += ")"
-        return "\(type.description)\(initParameters)"
+        let initializerParameters = properties.enumerated()
+            .map { index, property in
+                "\(property.propertyName): parameter.\(index)"
+            }
+            .joined(separator: ", ")
+        return "\(type.description)(\(initializerParameters))"
     }
 
-    private static func createRequiredInitializationParameter(members: [PropertyData]) -> String {
+    private static func createInitializationParameterType(members: [PropertyData]) -> String {
         "(\(members.map(\.type).joined(separator: ", ")))"
     }
 }
