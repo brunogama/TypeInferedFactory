@@ -188,3 +188,46 @@ extension SimpleContainer: TypeInferedFactoryBuildable {
 
 Since there are many `inits` the macro will generate `RequiredInitializationParameter` based on the init with biggest number of parameters.
 
+## Installation
+
+This is not production ready. But you can install using SPM.
+
+Add the package to your Package.swift:
+
+```swift
+dependencies: [
+    .package(url: "https://github.com/your-repo/TypeInferedFactoryMacro.git", from: "0.0.1")
+]
+```
+
+## Usage
+
+1. Import the target
+
+```swift
+import TypeInferedFactory
+```
+
+2. Annotate your type with `@FactoryBuildable`:
+
+```swift
+@FactoryBuildable
+struct Product {
+    let id: Int
+    let name: String
+}
+```
+
+3. Use the factory to create instances:
+
+```swift
+let factory = Factory()
+
+let product: Product = factory.make(101, "Table")
+```
+
+## Limitations
+
+Since `TypeInferedFactoryBuildable` `construct` method returns `Self` at the moment this code only works with `Strucs` and `Final Classes`. Classes that are not final must be initialezed using `Self`. Swift compiler acts weird when using directly `Self` `inits`.
+
+It's not fully tested. So property wrappers, Member Macros, inits with result builders still a mistery how the macro will produce de code. I recommend to implement `TypeInferedFactoryBuildable` manually if any undesired code generation occurs.
