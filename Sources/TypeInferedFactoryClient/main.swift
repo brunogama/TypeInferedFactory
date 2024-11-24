@@ -2,7 +2,7 @@ import Foundation
 import Swinject
 import TypeInferedFactory
 
-let factory = Factory()
+let factory = TypeInferedFactory()
 
 @FactoryBuildable
 struct Developer {

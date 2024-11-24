@@ -38,7 +38,7 @@ This protocol defines a make method, dynamically constructing an output object u
 To support this factory system, a base class Factory is provided. This class implements TypeInferedFactoryProtocol and can be overridden for custom behavior:
 
 ```swift
-open class Factory: TypeInferedFactoryProtocol {
+open class TypeInferedFactory: TypeInferedFactoryProtocol {
     public init() {}
 
     public func make<Output, each T>(
@@ -61,7 +61,7 @@ import TypeInferedFactory
 2. Use the factory to create an object:
 
 ```swift
-let factory = Factory()
+let factory = TypeInferedFactory()
 let user: User = factory.make(1, "Alice")
 ```
 

@@ -1,11 +1,11 @@
 //
-//  Factory.swift
+//  TypeInferedFactory.swift
 //  TypeInferedFactory
 //
 //  Created by Bruno on 22/11/24.
 //
 
-open class Factory: TypeInferedFactoryProtocol {
+open class TypeInferedFactory: TypeInferedFactoryProtocol {
     public init() {}
 
     public func make<Output, each T>(
