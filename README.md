@@ -1,12 +1,12 @@
 # 🏭 Type-Inferred Factory Protocol System and Macro
 
-This is a experiment using swift parameter packs. It's core ideia is to create protocol system to make factories (or something that is quite a factory) and its produced objects easier.
+This is an experiment using Swift parameter packs. Its core idea is to create a protocol system to make factories (or something resembling factories) and their produced objects more manageable.
 
 ## Concept
 
-The core idea of this factory like implementation is to not leak object implementation details inside the factory. For that I come up with some protocols to asssist to solve this problem.
+The core idea of this factory-like implementation is to encapsulate object creation details within a factory, preventing direct exposure of implementation details. To achieve this, I devised two protocols to address this problem.
 
-**1 - TypeInferedFactoryBuildable**
+**1 - `TypeInferedFactoryBuildable`**
 
 A protocol for types that can be constructed using a factory method.
 
@@ -31,11 +31,11 @@ public protocol TypeInferedFactoryProtocol {
 }
 ```
 
-This protocol defines the make method, which dynamically builds an output object using the provided values.
+This protocol defines a make method, dynamically constructing an output object using the provided values.
 
-## Making use of it
+## Usage
 
-To support the factory system, a base factory class is provided. This class implements `TypeInferedFactoryProtocol` and can be overridden for custom behavior:
+To support this factory system, a base class Factory is provided. This class implements TypeInferedFactoryProtocol and can be overridden for custom behavior:
 
 ```swift
 open class Factory: TypeInferedFactoryProtocol {
@@ -50,17 +50,22 @@ open class Factory: TypeInferedFactoryProtocol {
 }
 ```
 
-**Example**
+### Example Usage
 
-The base factory takes a variadic list of parameters and constructs an object:
+1. Import the library:
+
+```swift
+import TypeInferedFactory
+```
+
+2. Use the factory to create an object:
 
 ```swift
 let factory = Factory()
-
 let user: User = factory.make(1, "Alice")
 ```
 
-The `User` implementation of `TypeInferedFactoryBuildable` makes the parameter pack inside the make method compile time safe.
+3. Implement TypeInferedFactoryBuildable in your type:
 
 ```swift
 struct User {
@@ -77,13 +82,15 @@ extension User: TypeInferedFactoryBuildable {
 }
 ```
 
-The idea works perfectly. But the implementation can be error prone. 
+The `User` implementation of `TypeInferedFactoryBuildable` ensures compile-time safety for the parameter pack inside the `make` method. If any arguments passed to the `make` method differ from the RequiredInitializationParameter tuple, the Swift compiler will throw an error.
 
-Imagine implementation of `TypeInferedFactoryBuildable` protocol in a more complex class.
+### Example with a Complex Class
 
-**Example 2**
+For more complex types, implementing the `construct` method manually can become cumbersome:
 
 ```swift
+import TypeInferedFactory
+
 final class SimpleContainer {
     let firstValue: Int
     let secondValue: String
@@ -96,11 +103,11 @@ final class SimpleContainer {
     }
 
     convenience init(firstValue: Int, secondValue: String) {
-        self.init(firstValue: firstValue, secondValue: secondValue, description: "Default description")
+        self.init(firstValue: firstValue, secondValue: secondValue, description: "Default description", shouldRedact: false)
     }
 
     convenience init(firstValue: Int) {
-        self.init(firstValue: firstValue, secondValue: "Default String", description: "Default description")
+        self.init(firstValue: firstValue, secondValue: "Default String", description: "Default description", shouldRedact: false)
     }
 }
 
@@ -108,24 +115,30 @@ extension SimpleContainer: TypeInferedFactoryBuildable {
     typealias RequiredInitializationParameter = (Int, String, String, Bool)
 
     static func construct(_ parameter: RequiredInitializationParameter) -> SimpleContainer {
-        SimpleContainer(firstValue: parameter.0, secondValue: parameter.1, description: parameter.2, shouldRedact: parameter.3)
+        SimpleContainer(
+            firstValue: parameter.0,
+            secondValue: parameter.1,
+            description: parameter.2,
+            shouldRedact: parameter.3
+        )
     }
 }
+
 ```
 
-The tuple creation and the init assignment will become more complex.
+The `RequiredInitializationParameter` tuple reflects all parameters of the initializer with the largest number of arguments. Handling these tuple indices can become tedious in complex classes.
 
-## The Macro 
+## The Macro
 
-To make the life of the engineer easier a Swift Macro was added into the package.
+To simplify this process, a Swift macro is included in the package. It automatically generates the necessary code for `TypeInferedFactoryBuildable` conformance.
 
-The macro automatically generates the necessary code for `TypeInferedFactoryBuildable` conformance.
-
-**Example 1**
+### Example with Macro
 
 **Input**
 
 ```swift
+import TypeInferedFactory
+
 @FactoryBuildable
 struct User {
     let id: Int
@@ -145,13 +158,15 @@ extension User: TypeInferedFactoryBuildable {
 }
 ```
 
-The macro evaluates its binded target. If it does not have any `inits` it will generate `RequiredInitializationParameter` based on the properties of where it is attached.
+The macro evaluates its target. If the target does not have any initializers, it generates `RequiredInitializationParameter` based on the properties of the type.
 
-**Example 2**
+### Example with a Complex Class
 
 **Input**
 
 ```swift
+import TypeInferedFactory
+
 @FactoryBuildable
 final class SimpleContainer {
     let firstValue: Int
@@ -165,11 +180,11 @@ final class SimpleContainer {
     }
 
     convenience init(firstValue: Int, secondValue: String) {
-        self.init(firstValue: firstValue, secondValue: secondValue, description: "Default description")
+        self.init(firstValue: firstValue, secondValue: secondValue, description: "Default description", shouldRedact: false)
     }
 
     convenience init(firstValue: Int) {
-        self.init(firstValue: firstValue, secondValue: "Default String", description: "Default description")
+        self.init(firstValue: firstValue, secondValue: "Default String", description: "Default description", shouldRedact: false)
     }
 }
 ```
@@ -186,13 +201,14 @@ extension SimpleContainer: TypeInferedFactoryBuildable {
 }
 ```
 
-Since there are many `inits` the macro will generate `RequiredInitializationParameter` based on the init with biggest number of parameters.
+The macro generates the `RequiredInitializationParameter` based on the initializer with the largest number of parameters.
 
 ## Installation
 
-This is not production ready. But you can install using SPM.
+This is not production-ready, but you can install it using Swift Package Manager (SPM).
 
 Add the package to your Package.swift:
+
 
 ```swift
 dependencies: [
@@ -200,34 +216,13 @@ dependencies: [
 ]
 ```
 
-## Usage
-
-1. Import the target
-
-```swift
-import TypeInferedFactory
-```
-
-2. Annotate your type with `@FactoryBuildable`:
-
-```swift
-@FactoryBuildable
-struct Product {
-    let id: Int
-    let name: String
-}
-```
-
-3. Use the factory to create instances:
-
-```swift
-let factory = Factory()
-
-let product: Product = factory.make(101, "Table")
-```
-
 ## Limitations
 
-Since `TypeInferedFactoryBuildable` `construct` method returns `Self` at the moment this code only works with `Strucs` and `Final Classes`. Classes that are not final must be initialezed using `Self`. Swift compiler acts weird when using directly `Self` `inits`.
+Non-Final Classes: Since the construct method of `TypeInferedFactoryBuildable` returns `Self`, this implementation supports only structs and final classes. Non-final classes cannot reliably use Self.init because the compiler cannot guarantee correct initialization of subclasses, which may result in runtime errors or compilation issues. Common compiler errors include:
 
-It's not fully tested. So property wrappers, Member Macros, inits with result builders still a mistery how the macro will produce de code. I recommend to implement `TypeInferedFactoryBuildable` manually if any undesired code generation occurs.
+* "Cannot use 'Self.init' in a non-final class"
+* "Use of 'Self' initializer in a non-final class requires 'required' modifier"
+
+For non-final classes, you must implement TypeInferedFactoryBuildable manually.
+
+Experimental Status: The macro is not fully tested. Its behavior with property wrappers, member macros, and result builder initializers is not guaranteed. If undesired code generation occurs, implement TypeInferedFactoryBuildable manually.
